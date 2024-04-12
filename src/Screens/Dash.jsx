@@ -119,7 +119,7 @@ function Dash() {
         {isLoading ? ( // Render spinner if isLoading is true
           <div className="flex justify-center items-center align-middle h-screen">
             <div>
-              <Lottie options={defaultOptions} height={500} width={500} />
+              <Lottie options={defaultOptions} height={400} width={400} />
             </div>
           </div>
         ) : (
