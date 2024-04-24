@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 // Assuming data3 is provided as described in the new dataset structure
 
 const MenuComponent = () => {
@@ -789,8 +789,32 @@ const MenuComponent = () => {
     slug: "chai-tapri",
     owner: 2,
   };
+
+  const url =
+    "https://techrest.pythonanywhere.com/tables-view/chai-tapri/chai-tapri-college-road/";
+
+  const [data, setData] = useState([]);
+
+  const [isLoading, setIsLoading] = useState(true); // State for loading spinner
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const response = await axios.get(url);
+        setData(response.data);
+        console.log(data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false); // Set loading to false regardless of success or error
+      }
+    }
+    fetchData();
+  }, []);
+  console.log("Asa");
   return (
     <div>
+      {console.log("as")}
       {data3.categories.map((category) => (
         <div key={category.name}>
           <h1
