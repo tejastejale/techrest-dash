@@ -8,7 +8,14 @@ import {
   TabsBody,
   Tab,
   TabPanel,
+  Button,
+  Dialog,
+  DialogHeader,
+  DialogBody,
+  DialogFooter,
+  Checkbox,
 } from "@material-tailwind/react";
+
 import axios from "axios";
 import animationData from "../Components/Animation - 1712920808167.json";
 import Lottie from "react-lottie";
@@ -20,7 +27,78 @@ function Dash() {
     animationData: animationData,
     renderer: "svg",
   };
+  const [openModal, setOpenModal] = React.useState(false);
 
+  // Function to open or close the modal
+  const handleOpenModal = () => setOpenModal(!openModal);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState("");
+  const handlePaymentMethodChange = (method) =>
+    setSelectedPaymentMethod(method);
+
+  const [paymentMethod, setPaymentMethod] = useState(""); // Track payment method
+  const [selectedTableOrderId, setSelectedTableOrderId] = useState(null); // Track selected table order ID
+  // Function to handle payment
+  const makePayment = async () => {
+    if (!selectedPaymentMethod || !selectedTableOrderId) {
+      alert("Please select a payment method and a table order.");
+      return;
+    }
+    console.log(selectedTableOrderId);
+    console.log(selectedPaymentMethod);
+    const paymentData = {
+      paymentMethod: selectedPaymentMethod,
+      table_order_id: selectedTableOrderId,
+    };
+
+    try {
+      const response = await axios.post(
+        "https://techrest.pythonanywhere.com/make-payment-admin/",
+        paymentData
+      );
+      console.log("Payment made successfully:", response.data);
+      // Optionally, you can handle any UI updates or additional logic after payment
+    } catch (error) {
+      console.error("Error making payment:", error);
+      alert("Error making payment. Please try again later.");
+    }
+    window.location.reload();
+  };
+
+  const submitOrder = async () => {
+    if (!selectedTableId || selectedItems.length === 0) {
+      alert("Please select a table and add items to make an order.");
+      return;
+    }
+
+    const requestData = {
+      table_id: selectedTableId,
+      products: selectedItems.map((item) => ({
+        quantity: item.quantity,
+        item: item.id,
+      })),
+    };
+    console.log(requestData);
+
+    try {
+      const response = await axios.post(
+        "https://techrest.pythonanywhere.com/order/",
+        requestData,
+        {
+          headers: {
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTMsIm5hbWUiOiJlbXB0eSIsIm1vYmlsZV9udW1iZXIiOiIxMjM0NTY3ODkwIn0.R0RDCWA8DfhWRQMysGoC9RS8CVRUy1NHS9JMUDhNWpM",
+          },
+        }
+      );
+      console.log("Order submitted successfully:", response.data);
+      // Clear selected items after successful order submission
+      clearSelectedItems();
+    } catch (error) {
+      console.error("Error submitting order:", error);
+      alert("Error submitting order. Please try again later.");
+    }
+    window.location.reload();
+  };
   const url =
     "https://techrest.pythonanywhere.com/menu/chai-tapri/chai-tapri-college-road/";
   const url2 =
@@ -29,7 +107,7 @@ function Dash() {
   const [menudata, setData] = useState([]);
   const [tabledata, settabledata] = useState([]);
   const [orderdata, setorderdata] = useState([]);
-
+  const [tableOrderData, setTableOrderData] = useState(null);
   const [isLoading, setIsLoading] = useState(true); // State for loading spinner
 
   useEffect(() => {
@@ -59,14 +137,31 @@ function Dash() {
     }
     fetchData();
   }, []);
-  const [activeTab2, setActiveTab2] = React.useState("all");
+  const fetchTableOrderData = async (tableId) => {
+    try {
+      const response = await axios.get(
+        `https://TechRest.pythonanywhere.com/get-table-order/${tableId}`
+      );
+      setTableOrderData(response.data);
+      setSelectedTableOrderId(response.data.table_order.id); // Update selected table order ID
+    } catch (error) {
+      console.error("Error fetching table order data:", error);
+    }
+  };
+  const [activeTab2, setActiveTab2] = React.useState("kabhi-kabhi");
   const [selectedName, setSelectedName] = React.useState(null);
   const [selectedTable, setSelectedTable] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);
 
-  const handleTableClick = (id) => {
+  const handleTableClick = (id, name) => {
     setSelectedTable(id);
+    setSelectedTableId(id);
+    setSelectedTableName(name); // Set selected table name
+
     clearSelectedItems();
+    fetchTableOrderData(id);
+
+    console.log("Selected Table ID:", id);
   };
 
   function getTableIds() {
@@ -90,24 +185,20 @@ function Dash() {
   const allTableIds = getTableIds();
 
   const [selectedTableId, setSelectedTableId] = useState(null);
+  const [selectedTableName, setSelectedTableName] = useState(null); // State to store selected table name
 
   // Function to handle table click
 
-  const handleNameClick2 = (name, price) => {
-    // Check if the item already exists in selectedItems
-    const existingItemIndex = selectedItems.findIndex(
-      (item) => item.name === name
-    );
+  const handleNameClick2 = (name, price, id) => {
+    const existingItemIndex = selectedItems.findIndex((item) => item.id === id);
     if (existingItemIndex !== -1) {
-      // If the item already exists, update its quantity
       const updatedItems = [...selectedItems];
       updatedItems[existingItemIndex].quantity++;
       setSelectedItems(updatedItems);
     } else {
-      // If the item doesn't exist, add it to selectedItems with quantity 1
       setSelectedItems((prevItems) => [
         ...prevItems,
-        { name: name, price: price, quantity: 1 },
+        { id: id, name: name, price: price, quantity: 1 },
       ]);
     }
   };
@@ -159,69 +250,7 @@ function Dash() {
       divCount: 3,
     },
   ];
-  function getOUTableList() {
-    if (
-      tabledata &&
-      tabledata.tables &&
-      Array.isArray(tabledata.tables) &&
-      tabledata.tables.length > 0
-    ) {
-      const firstList = tabledata.tables[0]; // Index 0 represents the first list
-      const tableInfo = firstList.map((table) => ({
-        table_no: table.table_no,
-        id: table.id,
-      }));
-      return tableInfo;
-    } else {
-      return []; // Return an empty array if tabledata.tables is not defined, not an array, or empty
-    }
-  }
-  function getINTableList() {
-    if (
-      tabledata &&
-      tabledata.tables &&
-      Array.isArray(tabledata.tables) &&
-      tabledata.tables.length > 0
-    ) {
-      const firstList = tabledata.tables[1]; // Index 0 represents the first list
-      const tableInfo = firstList.map((table) => ({
-        table_no: table.table_no,
-        id: table.id,
-      }));
-      return tableInfo;
-    } else {
-      return []; // Return an empty array if tabledata.tables is not defined, not an array, or empty
-    }
-  }
-  function getMAZTableList() {
-    if (
-      tabledata &&
-      tabledata.tables &&
-      Array.isArray(tabledata.tables) &&
-      tabledata.tables.length > 0
-    ) {
-      const firstList = tabledata.tables[2]; // Index 0 represents the first list
-      const tableInfo = firstList.map((table) => ({
-        table_no: table.table_no,
-        id: table.id,
-      }));
-      return tableInfo;
-    } else {
-      return []; // Return an empty array if tabledata.tables is not defined, not an array, or empty
-    }
-  }
 
-  // Example usage: retrieving table info from the first list (Outdoor tables)
-  const outdoorTableInfo = getOUTableList();
-  const indoorTableInfo = getINTableList();
-  const mazTableInfo = getMAZTableList();
-  const tableNumbers1 = outdoorTableInfo.map(
-    (table) => (table.id, table.table_no)
-  );
-  const tableNumbers2 = indoorTableInfo.map(
-    (table) => (table.id, table.table_no)
-  );
-  const tableNumbers3 = mazTableInfo.map((table) => (table.id, table.table_no));
   function getTableList(index) {
     if (
       tabledata &&
@@ -233,6 +262,7 @@ function Dash() {
       const tableInfo = list.map((table) => ({
         table_no: table.table_no,
         id: table.id,
+        table_color: table.table_color,
       }));
       return tableInfo;
     } else {
@@ -288,8 +318,17 @@ function Dash() {
                                 {getTableList(0).map((table) => (
                                   <div
                                     key={table.id}
-                                    className="p-6 px-8 border-2 bg-gray-100 rounded-lg h-fit w-fit justify-center text-center align-center"
-                                    onClick={() => handleTableClick(table.id)}
+                                    className={`p-6 px-8 border-2 font-bold rounded-lg h-fit w-fit justify-center text-center align-center`}
+                                    style={{
+                                      backgroundColor: table.table_color,
+                                      color:
+                                        table.table_color === "#B33F40"
+                                          ? "white"
+                                          : "black",
+                                    }}
+                                    onClick={() =>
+                                      handleTableClick(table.id, table.table_no)
+                                    }
                                   >
                                     {table.table_no}
                                   </div>
@@ -308,8 +347,17 @@ function Dash() {
                                 {getTableList(1).map((table) => (
                                   <div
                                     key={table.id}
-                                    className="p-6 px-8 border-2 bg-gray-100 rounded-lg h-fit w-fit justify-center text-center align-center"
-                                    onClick={() => handleTableClick(table.id)}
+                                    className={`p-6 px-8 border-2 font-bold rounded-lg h-fit w-fit justify-center text-center align-center`}
+                                    style={{
+                                      backgroundColor: table.table_color,
+                                      color:
+                                        table.table_color === "#B33F40"
+                                          ? "white"
+                                          : "black",
+                                    }}
+                                    onClick={() =>
+                                      handleTableClick(table.id, table.table_no)
+                                    }
                                   >
                                     {table.table_no}
                                   </div>
@@ -328,8 +376,17 @@ function Dash() {
                                 {getTableList(2).map((table) => (
                                   <div
                                     key={table.id}
-                                    className="p-6 px-8 border-2 bg-gray-100 rounded-lg h-fit w-fit justify-center text-center align-center"
-                                    onClick={() => handleTableClick(table.id)}
+                                    className={`p-6 px-8 border-2 font-bold rounded-lg h-fit w-fit justify-center text-center align-center`}
+                                    style={{
+                                      backgroundColor: table.table_color,
+                                      color:
+                                        table.table_color === "#B33F40"
+                                          ? "white"
+                                          : "black",
+                                    }}
+                                    onClick={() =>
+                                      handleTableClick(table.id, table.table_no)
+                                    }
                                   >
                                     {table.table_no}
                                   </div>
@@ -395,12 +452,16 @@ function Dash() {
                       {selectedMenu && (
                         <div className="grid grid-cols-5 grid-rows-2 gap-5 p-2 w-full h-full overflow-auto">
                           {selectedMenu.map((menu) => (
-                            <div className="">
+                            <div className="" key={menu.id}>
                               <div
                                 key={menu.id}
                                 className="bg-gray-100 p-2 rounded-lg h-full hover:cursor-pointer"
                                 onClick={() =>
-                                  handleNameClick2(menu.name, menu.price)
+                                  handleNameClick2(
+                                    menu.name,
+                                    menu.price,
+                                    menu.id
+                                  )
                                 }
                               >
                                 <h1>{menu.name}</h1>
@@ -415,14 +476,17 @@ function Dash() {
                   </div>
                 </div>
               </div>
-              <div className="w-1/4 ">
+              <div className="w-1/4 border-2">
                 <div className="bg-orange-500 text-white w-full p-2 text-xl overflow-auto ">
                   Added Food
                 </div>
                 <div className="overflow-auto border-b-2 max-h-[80vh] h-full">
                   <div className="p-2">
-                    {selectedTable && (
-                      <div className="p-1">Selected Table: {selectedTable}</div>
+                    {selectedTableName && (
+                      <div className="p-1 font-semibold">
+                        <hr className="w-full"></hr>
+                        Selected Table: {selectedTableName}
+                      </div>
                     )}
                     {selectedItems.length > 0 && (
                       <div className="p-1">
@@ -437,15 +501,183 @@ function Dash() {
                       </div>
                     )}
                     <hr className="w-full"></hr>
+                    <div className="p-0">
+                      {tableOrderData ? (
+                        tableOrderData.msg ? (
+                          <div className="p-1">{tableOrderData.msg}</div>
+                        ) : (
+                          <>
+                            <div>
+                              {/* <div className="p-1">
+                                Table Order ID: {tableOrderData.table_order.id}
+                              </div> */}
+                              {/* <div className="p-1">
+                                Started At:{" "}
+                                {tableOrderData.table_order.started_at}
+                              </div>
+                              <div className="p-1">
+                                Completed At:{" "}
+                                {tableOrderData.table_order.completed_at ||
+                                  "N/A"}
+                              </div>
+                              <div className="p-1">
+                                Is Paid:{" "}
+                                {tableOrderData.table_order.is_paid
+                                  ? "Yes"
+                                  : "No"}
+                              </div>
+                              <div className="p-1">
+                                Is Pending:{" "}
+                                {tableOrderData.table_order.is_pending
+                                  ? "Yes"
+                                  : "No"}
+                              </div>
+                              <div className="p-1">
+                                Payment Method:{" "}
+                                {tableOrderData.table_order.payment_method ||
+                                  "N/A"}
+                              </div>
+                              <div className="p-1">
+                                Is Ready Pay:{" "}
+                                {tableOrderData.table_order.is_ready_pay
+                                  ? "Yes"
+                                  : "No"}
+                              </div> */}
+                            </div>
+                            <div className="p-1">
+                              <p className="font-semibold pb-1">
+                                Recent Orders:
+                              </p>
+                              <ul>
+                                {tableOrderData.orders.map((order, index) => (
+                                  <li key={index} className="">
+                                    <div className="pt-2">
+                                      {/* Calculate custom KOT ID based on index */}
+                                      <div className="px-1 text-md font-medium bg-gray-300 -mb-1 rounded-t-md">
+                                        KOT ID: {index + 1}
+                                      </div>
+                                      <ul>
+                                        {order.order_details.map(
+                                          (detail, detailIndex) => (
+                                            <li
+                                              key={detailIndex}
+                                              className="py-1"
+                                            >
+                                              <div className="p-2 bg-gray-200 -mb-2">
+                                                {detail.item_name} X
+                                                {detail.quantity}
+                                                <p>Price: {detail.price}</p>
+                                                <p>{detail.table_order_id}</p>
+                                              </div>
+                                            </li>
+                                          )
+                                        )}
+                                      </ul>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            <div className="p-1 font-semibold text-lg">
+                              <hr className="w-full "></hr>
+                              Total: {tableOrderData.total}
+                            </div>
+                          </>
+                        )
+                      ) : (
+                        <div className="p-1">
+                          No table order data available.
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="gap-2 flex flex-row p-4 m-auto justify-center align-middle">
-                  <button className="bg-orange-500 rounded-lg p-3 w-full text-white text-xl">
+                  <button
+                    onClick={submitOrder}
+                    className="bg-orange-500 rounded-lg p-3 w-full text-white text-xl"
+                  >
                     Make Order
                   </button>
-                  <button className="bg-orange-500 rounded-lg p-3 w-full text-white text-xl">
+                  <button
+                    className="bg-orange-500 rounded-lg p-3 w-full text-white text-xl"
+                    onClick={handleOpenModal}
+                  >
                     Payment
                   </button>
+                  <div>
+                    <Dialog
+                      open={openModal}
+                      handler={handleOpenModal}
+                      animate={{
+                        mount: { scale: 1, y: 0 },
+                        unmount: { scale: 0.9, y: -100 },
+                      }}
+                    >
+                      <DialogHeader>Select Method</DialogHeader>
+                      <DialogBody className="flex flex-row justify-evenly">
+                        <div className="text-xl font-semibold">
+                          <Checkbox
+                            color="orange"
+                            label="Cash"
+                            checked={selectedPaymentMethod === "cash"}
+                            onChange={() => handlePaymentMethodChange("cash")}
+                          />
+                        </div>
+                        <div className="text-xl font-semibold">
+                          <Checkbox
+                            color="orange"
+                            label="Online"
+                            checked={selectedPaymentMethod === "online"}
+                            onChange={() => handlePaymentMethodChange("online")}
+                          />
+                        </div>
+                      </DialogBody>
+                      <DialogFooter className="flex flex-row justify-center">
+                        <Button
+                          variant="text"
+                          color="orange"
+                          onClick={handleOpenModal}
+                          className="mr-1 border-solid border-[1px] border-orange-500"
+                        >
+                          <span>Cancel</span>
+                        </Button>
+                        <Button
+                          variant="gradient"
+                          color="orange"
+                          onClick={() => {
+                            makePayment(); // Call makePayment when "Confirm" is clicked
+                            handleOpenModal(); // Call handleOpenModal when "Confirm" is clicked
+                          }}
+                          className="bg-orange-500 "
+                        >
+                          <span>Confirm</span>
+                        </Button>
+                      </DialogFooter>
+                    </Dialog>
+                  </div>
+                </div>
+                <div className="gap-2 flex flex-row p-4 m-auto justify-center align-middle">
+                  {/* Payment method selection */}
+                  {/* <div>
+                    <label htmlFor="paymentMethod">Payment Method:</label>
+                    <select
+                      id="paymentMethod"
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="border rounded-lg p-2 ml-2"
+                    >
+                      <option value="">Select Payment Method</option>
+                      <option value="cash">Cash</option>
+                      <option value="online">Online</option>
+                    </select>
+                  </div> */}
+                  {/* <button
+                    onClick={makePayment} // Call makePayment function on button click
+                    className="bg-orange-500 rounded-lg p-3 w-full text-white text-xl"
+                  >
+                    Make Payment
+                  </button> */}
                 </div>
               </div>
             </div>
