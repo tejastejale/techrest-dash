@@ -1,21 +1,23 @@
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useNavigate } from 'react-router-dom';
 import './App.css';
-import Home from './Screens/Home';
 import { Nav } from './Components/Nav';
-import MyTabs from './Screens/ex';
 import Dash from './Screens/Dash';
-import MenuComponent from './Screens/ex';
-
-
-
+import Auth from './Screens/Auth';
+import { useEffect } from 'react';
 
 function App() {
+  const usenavigate = useNavigate();
+  useEffect(() => {
+    let username = sessionStorage.getItem("username");
+    if (username === '' || username === null) {
+      usenavigate("/")
+    }
+  }, []);
   return (
     <div><Nav />
       <Routes>
-        <Route path='/' element={<Dash />}></Route>
-        <Route path='/a' element={<MenuComponent />}></Route>
-
+        <Route path="/" element={<Dash />} />
+        <Route path="/auth" element={<Auth />} />
       </Routes>
     </div>
   );

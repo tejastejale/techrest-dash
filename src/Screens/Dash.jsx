@@ -369,7 +369,7 @@ function Dash() {
                         <>
                           <Accordion open={open === 2}>
                             <AccordionHeader onClick={() => handleOpen(2)}>
-                              Mazzieen
+                              Mezzanine
                             </AccordionHeader>
                             <AccordionBody>
                               <div className="p-1 gap-2 grid grid-cols-3 overflow-auto">
