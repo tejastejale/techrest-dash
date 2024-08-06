@@ -8,9 +8,9 @@ import { useEffect } from 'react';
 function App() {
   const usenavigate = useNavigate();
   useEffect(() => {
-    let username = sessionStorage.getItem("username");
+    let username = localStorage.getItem("username");
     if (username === '' || username === null) {
-      usenavigate("/")
+      usenavigate("/auth")
     }
   }, []);
   return (

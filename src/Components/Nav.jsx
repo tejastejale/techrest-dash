@@ -1,109 +1,80 @@
-import React from "react";
-import {
-  Navbar,
-  Collapse,
-  Typography,
-  IconButton,
-} from "@material-tailwind/react";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import React, { useState, useEffect } from "react";
+import { Navbar, Typography } from "@material-tailwind/react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 function NavList() {
   return (
     <ul className="my-2 flex flex-col gap-2 lg:mb-0 lg:mt-0 lg:flex-row lg:items-center lg:gap-6">
-      <Typography
-        as="li"
-        variant="small"
-        color="blue-gray"
-        className="p-1 font-medium"
-      >
-        <a
-          href="#"
-          className="flex items-center hover:text-blue-500 transition-colors"
+      {["Pages", "Account", "Blocks", "Docs"].map((item) => (
+        <Typography
+          key={item}
+          as="li"
+          variant="small"
+          color="blue-gray"
+          className="p-1 font-medium"
         >
-          Pages
-        </a>
-      </Typography>
-      <Typography
-        as="li"
-        variant="small"
-        color="blue-gray"
-        className="p-1 font-medium"
-      >
-        <a
-          href="#"
-          className="flex items-center hover:text-blue-500 transition-colors"
-        >
-          Account
-        </a>
-      </Typography>
-      <Typography
-        as="li"
-        variant="small"
-        color="blue-gray"
-        className="p-1 font-medium"
-      >
-        <a
-          href="#"
-          className="flex items-center hover:text-blue-500 transition-colors"
-        >
-          Blocks
-        </a>
-      </Typography>
-      <Typography
-        as="li"
-        variant="small"
-        color="blue-gray"
-        className="p-1 font-medium"
-      >
-        <a
-          href="#"
-          className="flex items-center hover:text-blue-500 transition-colors"
-        >
-          Docs
-        </a>
-      </Typography>
+          <a
+            href="#"
+            className="flex items-center hover:text-blue-500 transition-colors"
+          >
+            {item}
+          </a>
+        </Typography>
+      ))}
     </ul>
   );
 }
 
 export function Nav() {
-  const [openNav, setOpenNav] = React.useState(false);
+  const [openNav, setOpenNav] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const handleWindowResize = () =>
-    window.innerWidth >= 960 && setOpenNav(false);
+  useEffect(() => {
+    const handleWindowResize = () => {
+      if (window.innerWidth >= 960) setOpenNav(false);
+    };
 
-  React.useEffect(() => {
     window.addEventListener("resize", handleWindowResize);
+    handleWindowResize();
 
     return () => {
       window.removeEventListener("resize", handleWindowResize);
     };
   }, []);
 
+  useEffect(() => {
+    if (location.pathname === "/auth") {
+      setOpenNav(false);
+    } else {
+      setOpenNav(true);
+    }
+  }, [location.pathname]);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/auth");
+  };
+
   return (
-    <Navbar className="mx-auto max-w-full px-6 py-3 rounded-none">
-      <div className="">
-        <p className="text-center text-black text-xl">TechRest</p>
-      </div>
-      {/* <div className="hidden lg:block">
-          <NavList />
-        </div> */}
-      {/* <IconButton
-          variant="text"
-          className="ml-auto h-6 w-6 text-inherit hover:bg-transparent focus:bg-transparent active:bg-transparent lg:hidden"
-          ripple={false}
-          onClick={() => setOpenNav(!openNav)}
-        >
-          {openNav ? (
-            <XMarkIcon className="h-6 w-6" strokeWidth={2} />
-          ) : (
-            <Bars3Icon className="h-6 w-6" strokeWidth={2} />
+    openNav && (
+      <Navbar className="mx-auto max-w-full px-6 py-3 rounded-none flex ">
+        <div className="flex flex-row w-full">
+          <div className="flex flex-row content-center m-auto w-full text-center justify-end">
+            <p className="text-center text-black text-xl">TechRest</p>
+          </div>
+        </div>
+        {location.pathname === "/" && (
+          <div className="w-full flex flex-row justify-end ">
+
+            <button
+              onClick={handleLogout}
+              className="bg-orange-500 p-1 rounded-md px-3 text-center align-middle content-end float-end"
+            >
+              Logout
+            </button></div>
           )}
-        </IconButton>
-      </div>
-      <Collapse open={openNav}>
-        <NavList />
-      </Collapse> */}
-    </Navbar>
+      </Navbar>
+    )
   );
 }

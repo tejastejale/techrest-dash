@@ -28,7 +28,47 @@ function Dash() {
     renderer: "svg",
   };
   const [openModal, setOpenModal] = React.useState(false);
+  
+  const deletekot = async (id) => {
+    try {
+      await axios.delete(`https://techrest.pythonanywhere.com/ad/kot/${id}/`);
+      // alert("Deleted");
+      await fetchTableOrderData(selectedTableId);
 
+      // Update tableOrderData state to remove the deleted KOT
+      setTableOrderData((prevData) => ({
+        ...prevData,
+        orders: prevData.orders.filter((order) => order.kot_id !== id),
+      }));
+    } catch (err) {
+      console.log(err);
+    }
+    try {
+      const response = await axios.get(url2);
+      settabledata(response.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false); // Set loading to false regardless of success or error
+    }
+  };
+  const handleIncrement = (id) => {
+    setSelectedItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+      )
+    );
+  };
+
+  const handleDecrement = (id) => {
+    setSelectedItems((prevItems) =>
+      prevItems
+        .map((item) =>
+          item.id === id ? { ...item, quantity: item.quantity - 1 } : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  };
   // Function to open or close the modal
   const handleOpenModal = () => setOpenModal(!openModal);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState("");
@@ -43,8 +83,6 @@ function Dash() {
       alert("Please select a payment method and a table order.");
       return;
     }
-    console.log(selectedTableOrderId);
-    console.log(selectedPaymentMethod);
     const paymentData = {
       paymentMethod: selectedPaymentMethod,
       table_order_id: selectedTableOrderId,
@@ -56,14 +94,12 @@ function Dash() {
         paymentData
       );
       console.log("Payment made successfully:", response.data);
-      // Optionally, you can handle any UI updates or additional logic after payment
+      await fetchTableOrderData(selectedTableId);
     } catch (error) {
       console.error("Error making payment:", error);
       alert("Error making payment. Please try again later.");
     }
-    window.location.reload();
   };
-
   const submitOrder = async () => {
     if (!selectedTableId || selectedItems.length === 0) {
       alert("Please select a table and add items to make an order.");
@@ -77,7 +113,6 @@ function Dash() {
         item: item.id,
       })),
     };
-    console.log(requestData);
 
     try {
       const response = await axios.post(
@@ -91,13 +126,22 @@ function Dash() {
         }
       );
       console.log("Order submitted successfully:", response.data);
-      // Clear selected items after successful order submission
       clearSelectedItems();
+      await fetchTableOrderData(selectedTableId);
+      await fetchTableData(); // Fetch updated table data after order submission
     } catch (error) {
       console.error("Error submitting order:", error);
       alert("Error submitting order. Please try again later.");
     }
-    window.location.reload();
+  };
+
+  const fetchTableData = async () => {
+    try {
+      const response = await axios.get(url2);
+      settabledata(response.data);
+    } catch (error) {
+      console.error("Error fetching table data:", error);
+    }
   };
   const url =
     "https://techrest.pythonanywhere.com/menu/chai-tapri/chai-tapri-college-road/";
@@ -137,7 +181,7 @@ function Dash() {
     }
     fetchData();
   }, []);
-  const fetchTableOrderData = async (tableId) => {
+ const fetchTableOrderData = async (tableId) => {
     try {
       const response = await axios.get(
         `https://TechRest.pythonanywhere.com/get-table-order/${tableId}`
@@ -493,14 +537,32 @@ function Dash() {
                         Selected Items:
                         <ul>
                           {selectedItems.map((item, index) => (
-                            <li key={index}>
-                              {item.name} - X {item.quantity}
-                            </li>
+                            <div>
+                              <li className="flex pb-2" key={index}>
+                                <div className="w-full ">{item.name}</div>
+                                <div className=" flex justify-end  w-fit h-fit gap-2">
+                                  <button
+                                    className="bg-orange-500 rounded-xl px-2"
+                                    onClick={() => handleIncrement(item.id)}
+                                  >
+                                    +
+                                  </button>
+                                  {item.quantity}
+                                  <button
+                                    className="bg-orange-500 rounded-xl px-2"
+                                    onClick={() => handleDecrement(item.id)}
+                                  >
+                                    -
+                                  </button>
+                                </div>
+                              </li>
+                              <hr className="mb-2 border-orange-500 border-[1px]"></hr>
+                            </div>
                           ))}
                         </ul>
                       </div>
                     )}
-                    <hr className="w-full"></hr>
+
                     <div className="p-0">
                       {tableOrderData ? (
                         tableOrderData.msg ? (
@@ -553,25 +615,27 @@ function Dash() {
                                   <li key={index} className="">
                                     <div className="pt-2">
                                       {/* Calculate custom KOT ID based on index */}
-                                      <div className="px-1 text-md font-medium bg-gray-300 -mb-1 rounded-t-md">
+                                      <div className="px-1 text-md font-medium flex flex-row justify-between bg-gray-300 -mb-1 rounded-t-md">
                                         KOT ID: {index + 1}
+                                        <button
+                                          className="bg-red-500 px-2"
+                                          onClick={() =>
+                                            deletekot(order.kot_id)
+                                          }
+                                        >
+                                          X
+                                        </button>
                                       </div>
                                       <ul>
-                                        {order.order_details.map(
-                                          (detail, detailIndex) => (
-                                            <li
-                                              key={detailIndex}
-                                              className="py-1"
-                                            >
-                                              <div className="p-2 bg-gray-200 -mb-2">
-                                                {detail.item_name} X
-                                                {detail.quantity}
-                                                <p>Price: {detail.price}</p>
-                                                <p>{detail.table_order_id}</p>
-                                              </div>
-                                            </li>
-                                          )
-                                        )}
+                                      {order.order_details.map((detail, detailIndex) => (
+            <li key={detailIndex} className="py-1">
+              <div className="p-2 bg-gray-200 -mb-2">
+                {detail.item_name} X {detail.quantity}
+                <p>Total Price: {detail.quantity * detail.price}</p>
+                <p>{detail.table_order_id}</p>
+              </div>
+            </li>
+          ))}
                                       </ul>
                                     </div>
                                   </li>
